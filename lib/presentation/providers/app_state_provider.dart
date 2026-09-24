@@ -127,7 +127,7 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   // --- BIPLOT: Loading Threshold % (slider 0-100) ---
-  double _loadingThreshold = 10.0;
+  double _loadingThreshold = 0.0;
   double get loadingThreshold => _loadingThreshold;
   void setLoadingThreshold(double value) {
     _loadingThreshold = value;
@@ -135,10 +135,18 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   // --- BIPLOT: Loading Zoom % (slider 1-400) ---
-  double _loadingZoom = 100.0;
+  double _loadingZoom = 1.0;
   double get loadingZoom => _loadingZoom;
   void setLoadingZoom(double value) {
     _loadingZoom = value;
+    notifyListeners();
+  }
+
+  // --- BIPLOT: Label Font Size (slider 8-24) ---
+  double _biplotLabelFontSize = 14.0;
+  double get biplotLabelFontSize => _biplotLabelFontSize;
+  void setBiplotLabelFontSize(double value) {
+    _biplotLabelFontSize = value;
     notifyListeners();
   }
 

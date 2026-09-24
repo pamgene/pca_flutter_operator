@@ -12,7 +12,7 @@ class ActionsSection extends StatelessWidget {
 
     final hasFailed = provider.saveError != null && !provider.isSaving;
 
-    final IconData iconData;
+    final FaIconData iconData;
     final String label;
     if (provider.isSaving) {
       iconData = FontAwesomeIcons.floppyDisk;

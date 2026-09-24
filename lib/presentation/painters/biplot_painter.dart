@@ -11,6 +11,7 @@ class BiplotPainter extends CustomPainter {
   final String Function(int ci) labelForSample;
   final double loadingThresholdPercent;
   final double loadingZoomPercent;
+  final double labelFontSize;
   final bool isDark;
   final int? hoveredIndex;
   final int? hoveredLoadingIndex;
@@ -29,6 +30,7 @@ class BiplotPainter extends CustomPainter {
     required this.labelForSample,
     required this.loadingThresholdPercent,
     required this.loadingZoomPercent,
+    required this.labelFontSize,
     required this.isDark,
     this.hoveredIndex,
     this.hoveredLoadingIndex,
@@ -105,7 +107,6 @@ class BiplotPainter extends CustomPainter {
     final gridPaint = Paint()
       ..color = axisColor.withValues(alpha: 0.5)
       ..strokeWidth = 1.0;
-    // Only draw if origin is inside the plot area
     if (origin.dx > plotLeft && origin.dx < plotLeft + plotWidth) {
       canvas.drawLine(
           Offset(origin.dx, plotTop), Offset(origin.dx, plotTop + plotHeight), gridPaint);
@@ -122,7 +123,7 @@ class BiplotPainter extends CustomPainter {
       end: Offset(plotLeft + plotWidth, plotTop + plotHeight),
       dataMin: adjMinX,
       dataMax: adjMaxX,
-      tickDirection: const Offset(0, 1), // ticks go down
+      tickDirection: const Offset(0, 1),
       textColor: textColor,
       tickPaint: Paint()
         ..color = axisColor
@@ -136,7 +137,7 @@ class BiplotPainter extends CustomPainter {
       end: Offset(plotLeft, plotTop),
       dataMin: adjMinY,
       dataMax: adjMaxY,
-      tickDirection: const Offset(-1, 0), // ticks go left
+      tickDirection: const Offset(-1, 0),
       textColor: textColor,
       tickPaint: Paint()
         ..color = axisColor
@@ -193,7 +194,6 @@ class BiplotPainter extends CustomPainter {
         ..strokeWidth = 1.5
         ..style = PaintingStyle.stroke;
 
-      // Clip arrows to plot frame so zoom can't push them outside the axes
       canvas.save();
       canvas.clipRect(boxRect);
 
@@ -218,10 +218,8 @@ class BiplotPainter extends CustomPainter {
               ..style = PaintingStyle.stroke)
             : arrowPaint;
 
-        // Draw arrow line
         canvas.drawLine(originScreen, tipScreen, currentArrowPaint);
 
-        // Draw arrowhead
         final angle = atan2(
             tipScreen.dy - originScreen.dy, tipScreen.dx - originScreen.dx);
         const headLen = 8.0;
@@ -240,7 +238,6 @@ class BiplotPainter extends CustomPainter {
 
       canvas.restore();
 
-      // Show hover label outside clip so it can render near the edge
       for (var i = 0; i < loadings.length; i++) {
         if (magnitudes[i] < cutoff) continue;
         if (hoveredLoadingIndex != i) continue;
@@ -250,7 +247,6 @@ class BiplotPainter extends CustomPainter {
         final ly = l[pcIndexY] * loadingScale;
         final tipScreen = toScreen(lx, ly);
 
-        // Clamp label position to stay inside plot area
         final clampedTip = Offset(
           tipScreen.dx.clamp(plotLeft, plotLeft + plotWidth),
           tipScreen.dy.clamp(plotTop, plotTop + plotHeight),
@@ -268,7 +264,6 @@ class BiplotPainter extends CustomPainter {
           textDirection: TextDirection.ltr,
         )..layout();
 
-        // Background for readability
         final labelRect = Rect.fromLTWH(
           clampedTip.dx + 6,
           clampedTip.dy - nameTp.height / 2 - 2,
@@ -286,7 +281,9 @@ class BiplotPainter extends CustomPainter {
       }
     }
 
-    // --- Score points ---
+    // --- Score points: compute positions first, then place labels with overlap avoidance ---
+    final List<_LabelPlacement> placements = [];
+
     for (final s in scores) {
       final pos = toScreen(s[pcIndexX], s[pcIndexY]);
       projectedScorePositions.add(pos);
@@ -294,26 +291,75 @@ class BiplotPainter extends CustomPainter {
       final label = labelForSample(s.ci);
       final color = colorForSample(s.ci);
       final isHovered = hoveredIndex == s.ci;
-
-      if (isHovered) {
-        canvas.drawCircle(
-            pos, 8, Paint()..color = color.withValues(alpha: 0.3));
-      }
+      final fontSize = isHovered ? labelFontSize + 1 : labelFontSize;
 
       final tp = TextPainter(
         text: TextSpan(
           text: label,
           style: TextStyle(
             color: color,
-            fontSize: isHovered ? 12 : 11,
+            fontSize: fontSize,
             fontWeight: isHovered ? FontWeight.bold : FontWeight.w500,
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(
-          canvas, Offset(pos.dx - tp.width / 2, pos.dy - tp.height / 2));
+
+      // Default position: centred on the point
+      Offset labelOrigin = Offset(pos.dx - tp.width / 2, pos.dy - tp.height / 2);
+      Rect labelRect = Rect.fromLTWH(
+          labelOrigin.dx, labelOrigin.dy, tp.width, tp.height);
+
+      // Greedy offset search to avoid overlap with already-placed labels
+      if (!_overlapsAny(labelRect, placements)) {
+        placements.add(_LabelPlacement(labelRect, tp));
+      } else {
+        final step = fontSize + 2;
+        const directions = [
+          Offset(1, 0), Offset(1, -1), Offset(0, -1), Offset(-1, -1),
+          Offset(-1, 0), Offset(-1, 1), Offset(0, 1), Offset(1, 1),
+        ];
+        outer:
+        for (var dist = 1; dist <= 3; dist++) {
+          for (final dir in directions) {
+            final candidate = Offset(
+              labelOrigin.dx + dir.dx * step * dist,
+              labelOrigin.dy + dir.dy * step * dist,
+            );
+            final candidateRect = Rect.fromLTWH(
+                candidate.dx, candidate.dy, tp.width, tp.height);
+            if (!_overlapsAny(candidateRect, placements)) {
+              labelRect = candidateRect;
+              break outer;
+            }
+          }
+        }
+        placements.add(_LabelPlacement(labelRect, tp));
+      }
     }
+
+    // Draw score points and their labels
+    for (var i = 0; i < scores.length; i++) {
+      final s = scores[i];
+      final pos = projectedScorePositions[i];
+      final color = colorForSample(s.ci);
+      final isHovered = hoveredIndex == s.ci;
+      final p = placements[i];
+
+      if (isHovered) {
+        canvas.drawCircle(
+            pos, 8, Paint()..color = color.withValues(alpha: 0.3));
+      }
+
+      p.painter.paint(canvas, p.rect.topLeft);
+    }
+  }
+
+  bool _overlapsAny(Rect rect, List<_LabelPlacement> placements) {
+    for (final p in placements) {
+      if (rect.overlaps(p.rect.inflate(2))) return true;
+    }
+    return false;
   }
 
   void _drawLinearTicks({
@@ -368,4 +414,11 @@ class BiplotPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(BiplotPainter oldDelegate) => true;
+}
+
+class _LabelPlacement {
+  final Rect rect;
+  final TextPainter painter;
+
+  _LabelPlacement(this.rect, this.painter);
 }

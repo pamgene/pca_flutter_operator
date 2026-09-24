@@ -12,7 +12,7 @@ dependencies:
   provider: ^6.1.2
   get_it: ^8.0.3
   shared_preferences: ^2.2.2
-  font_awesome_flutter: ^10.8.0
+  font_awesome_flutter: ^11.0.0
   csv: ^6.0.0
   web: ^0.5.1
   # Tercen context API — required for Phase 3 (real data integration)

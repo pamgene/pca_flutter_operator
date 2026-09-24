@@ -107,6 +107,33 @@ class BiplotSection extends StatelessWidget {
             ),
           ],
         ),
+
+        const SizedBox(height: AppSpacing.md),
+
+        // Label Size slider (8-24 px)
+        Text('Label Size', style: AppTextStyles.label.copyWith(color: labelColor)),
+        const SizedBox(height: AppSpacing.xs),
+        Row(
+          children: [
+            Expanded(
+              child: Slider(
+                value: provider.biplotLabelFontSize,
+                min: 8,
+                max: 24,
+                divisions: 16,
+                onChanged: provider.setBiplotLabelFontSize,
+              ),
+            ),
+            SizedBox(
+              width: 36,
+              child: Text(
+                '${provider.biplotLabelFontSize.toStringAsFixed(0)}px',
+                style: AppTextStyles.body.copyWith(color: labelColor),
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
