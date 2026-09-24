@@ -26,7 +26,7 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _data = await _dataService.loadData();
+      _data = await _dataService.loadData(scale: _scaleSpots);
       print('PCA Explorer: AppState received data — ${_data!.scores.length} scores, fields=${_data!.annotationFields}, defaultColorBy=${_data!.defaultColorBy}');
       // Set defaults from data
       if (_data!.defaultColorBy.isNotEmpty) {
@@ -45,6 +45,15 @@ class AppStateProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  // --- COMPUTE: Scale spots ---
+  bool _scaleSpots = false;
+  bool get scaleSpots => _scaleSpots;
+  void setScaleSpots(bool value) {
+    _scaleSpots = value;
+    _hasSaved = false;
+    loadData();
   }
 
   // --- VIEW: Mode (segmented button) ---
@@ -150,6 +159,14 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- BIPLOT: Axis Padding % (slider 5-50) ---
+  double _biplotAxisPadding = 20.0;
+  double get biplotAxisPadding => _biplotAxisPadding;
+  void setBiplotAxisPadding(double value) {
+    _biplotAxisPadding = value;
+    notifyListeners();
+  }
+
   // --- 3D rotation/zoom (gesture-driven, not a panel control) ---
   double _rotationX = 0.3;
   double _rotationY = 0.5;
@@ -217,6 +234,24 @@ class AppStateProvider extends ChangeNotifier {
 
   /// Helper: get PC index from label like "PC1" -> 0
   int pcIndex(String pcLabel) => int.parse(pcLabel.substring(2)) - 1;
+
+  // --- EXPORT: PNG callback registered by the active view ---
+  void Function(BuildContext)? _exportCallback;
+  bool get canExport => _exportCallback != null;
+
+  void registerExportCallback(void Function(BuildContext) cb) {
+    _exportCallback = cb;
+    notifyListeners();
+  }
+
+  void unregisterExportCallback() {
+    _exportCallback = null;
+    notifyListeners();
+  }
+
+  void triggerExport(BuildContext context) {
+    _exportCallback?.call(context);
+  }
 
   // --- ACTIONS: Save state ---
   bool _hasSaved = false;

@@ -19,18 +19,17 @@ void main() async {
   String? taskId;
 
   if (!useMocks) {
-    try {
-      taskId = Uri.base.queryParameters['taskId'];
-      if (taskId == null || taskId.isEmpty) {
-        runApp(_buildErrorApp('Missing taskId parameter'));
-        return;
+    taskId = Uri.base.queryParameters['taskId'];
+    if (taskId != null && taskId.isNotEmpty) {
+      try {
+        print('PCA Explorer: initializing Tercen ServiceFactory...');
+        factory = await createServiceFactoryForWebApp();
+        print('PCA Explorer: ServiceFactory initialized, taskId=$taskId');
+      } catch (e) {
+        print('PCA Explorer: Tercen init failed: $e');
       }
-      print('PCA Explorer: initializing Tercen ServiceFactory...');
-      factory = await createServiceFactoryForWebApp();
-      print('PCA Explorer: ServiceFactory initialized, taskId=$taskId');
-    } catch (e) {
-      print('PCA Explorer: Tercen init failed: $e');
     }
+    // No taskId → fall through to mock mode (local preview)
   }
 
   setupServiceLocator(

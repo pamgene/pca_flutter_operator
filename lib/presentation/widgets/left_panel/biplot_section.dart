@@ -134,6 +134,54 @@ class BiplotSection extends StatelessWidget {
             ),
           ],
         ),
+
+        const SizedBox(height: AppSpacing.md),
+
+        // Axis Padding slider (5-50%)
+        Text('Axis Padding', style: AppTextStyles.label.copyWith(color: labelColor)),
+        const SizedBox(height: AppSpacing.xs),
+        Row(
+          children: [
+            Expanded(
+              child: Slider(
+                value: provider.biplotAxisPadding,
+                min: 5,
+                max: 50,
+                divisions: 45,
+                onChanged: provider.setBiplotAxisPadding,
+              ),
+            ),
+            SizedBox(
+              width: 36,
+              child: Text(
+                '${provider.biplotAxisPadding.toStringAsFixed(0)}%',
+                style: AppTextStyles.body.copyWith(color: labelColor),
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: AppSpacing.md),
+
+        // Scale PCA toggle
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Scale PCA', style: AppTextStyles.label.copyWith(color: labelColor)),
+            Switch(
+              value: provider.scaleSpots,
+              onChanged: provider.isLoading ? null : provider.setScaleSpots,
+            ),
+          ],
+        ),
+        Text(
+          'Use scaling if features are on different scales.',
+          style: AppTextStyles.labelSmall.copyWith(
+            color: isDark ? AppColorsDark.textMuted : AppColors.textMuted,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
       ],
     );
   }

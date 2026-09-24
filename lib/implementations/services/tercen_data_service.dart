@@ -27,14 +27,12 @@ class TercenDataService implements DataService {
   }
 
   @override
-  Future<PcaData> loadData() async {
+  Future<PcaData> loadData({bool scale = true}) async {
     try {
       final ctx = await _getContext();
 
-      // 1. Read operator properties
-      final scaleSpots =
-          (await ctx.opStringValue('Scale Spots', defaultValue: 'No')) ==
-              'Yes';
+      // Use scale value from UI (overrides operator property)
+      final scaleSpots = scale;
       final nComponentsProp =
           (await ctx.opDoubleValue('Number of Components', defaultValue: 5))
               .toInt();

@@ -48,6 +48,15 @@ pca_flutter_operator/
 - Never use manual HTTP calls — always use `sci_tercen_client` (CORS)
 - Plan mode required for all non-trivial features
 
+## Scale PCA demo dataset
+
+To demonstrate the visible effect of the Scale PCA toggle, show the user
+`lib/implementations/services/mock_data_service_scale_demo.dart`.
+Swap it in as the mock service in `lib/di/service_locator.dart` temporarily.
+Without scaling: BatchX/Y/Z/W variables (±100 scale) dominate PC1, groups not separated.
+With scaling: GeneA-D variables (~5 scale) dominate, three groups (A/B/C) separate cleanly.
+**Revert to the original `MockDataService` after the demo.**
+
 ## Reference projects
 
 - `C:\Users\Work\Documents\GitHub\mean_and_cv_flutter_operator` — working Type 1 app

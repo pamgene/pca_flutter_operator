@@ -31,6 +31,20 @@ class _PairsMatrixViewState extends State<PairsMatrixView> {
   final GlobalKey _repaintKey = GlobalKey();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.provider.registerExportCallback(_savePng);
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.provider.unregisterExportCallback();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = widget.provider;
     final n = provider.numComponents;
@@ -173,83 +187,57 @@ class _PairsMatrixViewState extends State<PairsMatrixView> {
           ],
         );
 
-        return Stack(
-          children: [
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(padding),
-                child: RepaintBoundary(
-                  key: _repaintKey,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      matrixBlock,
-                      const SizedBox(width: legendGap),
-                      ColorLegend(colorMap: provider.colorMap, isDark: isDark),
-                    ],
-                  ),
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(padding),
+            child: RepaintBoundary(
+              key: _repaintKey,
+              child: ColoredBox(
+                color: Colors.white,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    matrixBlock,
+                    const SizedBox(width: legendGap),
+                    ColorLegend(colorMap: provider.colorMap, isDark: isDark),
+                  ],
                 ),
               ),
             ),
-            Positioned(
-              bottom: 16,
-              right: 16,
-              child: _SavePngButton(
-                onPressed: () => _savePng(context),
-              ),
-            ),
-          ],
+          ),
         );
       },
     );
   }
 
   Future<void> _savePng(BuildContext context) async {
-    final boundary = _repaintKey.currentContext?.findRenderObject()
-        as RenderRepaintBoundary?;
-    if (boundary == null) return;
+    try {
+      final boundary = _repaintKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) {
+        if (context.mounted) _showError(context, 'Plot not ready');
+        return;
+      }
 
-    final image = await boundary.toImage(pixelRatio: 2.0);
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    if (byteData == null) return;
-    final bytes = byteData.buffer.asUint8List();
+      final image = await boundary.toImage(pixelRatio: 2.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        if (context.mounted) _showError(context, 'Failed to encode PNG');
+        return;
+      }
+      final bytes = byteData.buffer.asUint8List();
 
-    if (!context.mounted) return;
-    _showFilenameDialog(context, bytes, 'pairs_export');
+      if (!context.mounted) return;
+      _showFilenameDialog(context, bytes, 'pairs_export');
+    } catch (e) {
+      if (context.mounted) _showError(context, 'Export failed: $e');
+    }
   }
-}
 
-class _SavePngButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  const _SavePngButton({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Save as PNG',
-      child: Material(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(6),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(6),
-          onTap: onPressed,
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.download, size: 14, color: Color(0xFF374151)),
-                SizedBox(width: 4),
-                Text(
-                  'Save PNG',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF374151)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+  void _showError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red.shade700),
     );
   }
 }

@@ -14,6 +14,7 @@ import '../widgets/left_panel/appearance_section.dart';
 import '../widgets/left_panel/display_section.dart';
 import '../widgets/left_panel/components_section.dart';
 import '../widgets/left_panel/biplot_section.dart';
+import '../widgets/left_panel/export_section.dart';
 import '../widgets/left_panel/actions_section.dart';
 import '../widgets/left_panel/info_section.dart';
 import '../widgets/visualizations/scores_3d_view.dart';
@@ -49,6 +50,13 @@ class _HomeScreenState extends State<HomeScreen> {
         label: 'VIEW',
         content: ViewSection(),
       ),
+      // EXPORT — biplot and pairs only
+      if (mode == ViewMode.biplot || mode == ViewMode.pairs)
+        const PanelSection(
+          icon: Icons.download,
+          label: 'EXPORT',
+          content: ExportSection(),
+        ),
       // APPEARANCE — hidden in Variation mode
       if (mode != ViewMode.variation)
         PanelSection(

@@ -5,7 +5,7 @@ import '../../domain/services/data_service.dart';
 
 class MockDataService implements DataService {
   @override
-  Future<PcaData> loadData() async {
+  Future<PcaData> loadData({bool scale = false}) async {
     final results = await Future.wait([
       rootBundle.loadString('assets/data/scores.csv'),
       rootBundle.loadString('assets/data/loadings.csv'),
@@ -34,9 +34,7 @@ class MockDataService implements DataService {
   }
 
   @override
-  Future<void> saveResults(PcaData data) async {
-    // Mock mode: no-op
-  }
+  Future<void> saveResults(PcaData data) async {}
 
   List<PcaScore> _parseScores(String csv) {
     final rows = const CsvToListConverter(eol: '\n').convert(csv);

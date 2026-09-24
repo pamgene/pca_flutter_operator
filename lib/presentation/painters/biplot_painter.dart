@@ -12,6 +12,7 @@ class BiplotPainter extends CustomPainter {
   final double loadingThresholdPercent;
   final double loadingZoomPercent;
   final double labelFontSize;
+  final double axisMarginPercent;
   final bool isDark;
   final int? hoveredIndex;
   final int? hoveredLoadingIndex;
@@ -31,6 +32,7 @@ class BiplotPainter extends CustomPainter {
     required this.loadingThresholdPercent,
     required this.loadingZoomPercent,
     required this.labelFontSize,
+    required this.axisMarginPercent,
     required this.isDark,
     this.hoveredIndex,
     this.hoveredLoadingIndex,
@@ -75,9 +77,9 @@ class BiplotPainter extends CustomPainter {
     final rangeY = maxY - minY;
     if (rangeX == 0 && rangeY == 0) return;
 
-    // Add 10% margin
-    final marginX = max(rangeX * 0.1, 0.1);
-    final marginY = max(rangeY * 0.1, 0.1);
+    final marginFraction = axisMarginPercent / 100.0;
+    final marginX = max(rangeX * marginFraction, 0.1);
+    final marginY = max(rangeY * marginFraction, 0.1);
     final adjMinX = minX - marginX;
     final adjMaxX = maxX + marginX;
     final adjMinY = minY - marginY;

@@ -10,13 +10,6 @@
   "urls": ["https://github.com/tercen/pca_flutter_operator"],
   "properties": [
     {
-      "kind": "EnumeratedProperty",
-      "name": "Scale Spots",
-      "defaultValue": "No",
-      "description": "If the spots should be scaled before PCA computation",
-      "values": ["No", "Yes"]
-    },
-    {
       "kind": "DoubleProperty",
       "name": "Number of Components",
       "defaultValue": 5,
