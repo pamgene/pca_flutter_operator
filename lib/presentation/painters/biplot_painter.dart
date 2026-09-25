@@ -283,9 +283,9 @@ class BiplotPainter extends CustomPainter {
       }
     }
 
-    // --- Score points: compute positions first, then place labels with overlap avoidance ---
-    final List<_LabelPlacement> placements = [];
-
+    // --- Score points: draw dots, then place labels with overlap avoidance ---
+    // Pass 1: compute all dot positions and lay out label painters.
+    final List<_PointLabel> pointLabels = [];
     for (final s in scores) {
       final pos = toScreen(s[pcIndexX], s[pcIndexY]);
       projectedScorePositions.add(pos);
@@ -307,59 +307,71 @@ class BiplotPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
 
-      // Default position: centred on the point
-      Offset labelOrigin = Offset(pos.dx - tp.width / 2, pos.dy - tp.height / 2);
-      Rect labelRect = Rect.fromLTWH(
-          labelOrigin.dx, labelOrigin.dy, tp.width, tp.height);
-
-      // Greedy offset search to avoid overlap with already-placed labels
-      if (!_overlapsAny(labelRect, placements)) {
-        placements.add(_LabelPlacement(labelRect, tp));
-      } else {
-        final step = fontSize + 2;
-        const directions = [
-          Offset(1, 0), Offset(1, -1), Offset(0, -1), Offset(-1, -1),
-          Offset(-1, 0), Offset(-1, 1), Offset(0, 1), Offset(1, 1),
-        ];
-        outer:
-        for (var dist = 1; dist <= 3; dist++) {
-          for (final dir in directions) {
-            final candidate = Offset(
-              labelOrigin.dx + dir.dx * step * dist,
-              labelOrigin.dy + dir.dy * step * dist,
-            );
-            final candidateRect = Rect.fromLTWH(
-                candidate.dx, candidate.dy, tp.width, tp.height);
-            if (!_overlapsAny(candidateRect, placements)) {
-              labelRect = candidateRect;
-              break outer;
-            }
-          }
-        }
-        placements.add(_LabelPlacement(labelRect, tp));
-      }
+      pointLabels.add(_PointLabel(pos: pos, painter: tp,
+          color: color, isHovered: isHovered));
     }
 
-    // Draw score points and their labels
-    for (var i = 0; i < scores.length; i++) {
-      final s = scores[i];
-      final pos = projectedScorePositions[i];
-      final color = colorForSample(s.ci);
-      final isHovered = hoveredIndex == s.ci;
-      final p = placements[i];
+    // Pass 2: place labels with greedy avoidance, anchored to dots.
+    // Candidate offsets radiate outward from the dot in 8 directions.
+    const offsets = [
+      Offset(1, -1),  // upper-right (default)
+      Offset(-1, -1), // upper-left
+      Offset(1,  1),  // lower-right
+      Offset(-1,  1), // lower-left
+      Offset(0,  -1), // above
+      Offset(0,   1), // below
+      Offset(1,   0), // right
+      Offset(-1,  0), // left
+    ];
+    const dotR = 4.0;
+    final List<Rect> placed = [];
 
-      if (isHovered) {
-        canvas.drawCircle(
-            pos, 8, Paint()..color = color.withValues(alpha: 0.3));
+    for (final pl in pointLabels) {
+      final step = pl.painter.height + 2;
+      Rect? chosen;
+      outer:
+      for (var dist = 1; dist <= 5; dist++) {
+        for (final dir in offsets) {
+          final origin = Offset(
+            pl.pos.dx + dir.dx * (dotR + step * dist),
+            pl.pos.dy + dir.dy * (dotR + step * dist) - pl.painter.height / 2,
+          );
+          final candidate = Rect.fromLTWH(
+              origin.dx, origin.dy, pl.painter.width, pl.painter.height);
+          if (!_overlapsAny(candidate, placed)) {
+            chosen = candidate;
+            break outer;
+          }
+        }
       }
+      // If no non-overlapping spot found within 5 steps, place at default offset.
+      chosen ??= Rect.fromLTWH(
+        pl.pos.dx + dotR + 2,
+        pl.pos.dy - pl.painter.height,
+        pl.painter.width,
+        pl.painter.height,
+      );
+      placed.add(chosen);
+      pl.labelRect = chosen;
+    }
 
-      p.painter.paint(canvas, p.rect.topLeft);
+    // Pass 3: draw dots then labels.
+    for (final pl in pointLabels) {
+      canvas.drawCircle(pl.pos, pl.isHovered ? 5.0 : dotR,
+          Paint()..color = pl.color);
+      if (pl.isHovered) {
+        canvas.drawCircle(
+            pl.pos, 9, Paint()..color = pl.color.withValues(alpha: 0.25));
+      }
+      if (pl.labelRect != null) {
+        pl.painter.paint(canvas, pl.labelRect!.topLeft);
+      }
     }
   }
 
-  bool _overlapsAny(Rect rect, List<_LabelPlacement> placements) {
-    for (final p in placements) {
-      if (rect.overlaps(p.rect.inflate(2))) return true;
+  bool _overlapsAny(Rect rect, List<Rect> placed) {
+    for (final p in placed) {
+      if (rect.overlaps(p.inflate(1))) return true;
     }
     return false;
   }
@@ -418,9 +430,17 @@ class BiplotPainter extends CustomPainter {
   bool shouldRepaint(BiplotPainter oldDelegate) => true;
 }
 
-class _LabelPlacement {
-  final Rect rect;
+class _PointLabel {
+  final Offset pos;
   final TextPainter painter;
+  final Color color;
+  final bool isHovered;
+  Rect? labelRect;
 
-  _LabelPlacement(this.rect, this.painter);
+  _PointLabel({
+    required this.pos,
+    required this.painter,
+    required this.color,
+    required this.isHovered,
+  });
 }
